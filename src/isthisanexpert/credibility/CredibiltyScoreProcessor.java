@@ -71,6 +71,9 @@ public class CredibiltyScoreProcessor {
 	    // tanh(x) to hold values within a reasonable range
 	    scoreValue = (float) Math.tanh(scoreValue);
 
+	    // output for twitter bot
+	    System.out.println(scoreValue);
+	    
 	    return scoreValue;
 	}
 	
@@ -110,6 +113,9 @@ public class CredibiltyScoreProcessor {
         // no score in database found for this user
         if(score == null) {
         	db.insertCredibilityScore(user.getId(), calculateScore(user), true);
+        } else {
+            // output for twitter bot
+    	    System.out.println(score.getScore());
         }
 	}
 
