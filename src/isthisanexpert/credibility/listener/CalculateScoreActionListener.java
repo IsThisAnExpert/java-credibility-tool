@@ -18,6 +18,6 @@ public class CalculateScoreActionListener implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent event) {
 		CredibiltyScoreProcessor scoreProcessor = new CredibiltyScoreProcessor();
-		scoreProcessor.process(txtUsername.getText());
+		scoreProcessor.processCalculation(txtUsername.getText());
 	}
 }

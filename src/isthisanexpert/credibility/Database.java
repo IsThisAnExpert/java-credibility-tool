@@ -1,5 +1,8 @@
 package isthisanexpert.credibility;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import isthisanexpert.credibility.model.CredibilityScore;
 import isthisanexpert.credibility.model.Retweet;
@@ -17,7 +21,7 @@ import isthisanexpert.credibility.model.User;
 
 public class Database {
 
-	// TODO do db export and commit exported SQL
+	private static final File dbFile = new File("db.properties");
 	
 	private static Connection connection = null;
 	
@@ -29,17 +33,27 @@ public class Database {
 	{
         try {
         	if( connection == null) {
-        		// TODO use properties file
-        		String url = "jdbc:mysql://hostname:3306/dbname";
-                String username = "user";
-                String password = "pw";
-        		connection = DriverManager.getConnection(url, username, password);
+        		if(!dbFile.exists())
+        		{
+        			throw new IOException("File db.properties does not exist!");
+        		}
+        		Properties dbProperties = new Properties();
+        		FileInputStream fis = new FileInputStream(dbFile);
+        		
+        		dbProperties.load(fis);
+        		String host = dbProperties.getProperty("host");
+        		String dbName = dbProperties.getProperty("dbname");
+        		String user = dbProperties.getProperty("user");
+        		String password = dbProperties.getProperty("password");
+        		String url = "jdbc:mysql://" + host + ":3306/" + dbName;
+        		connection = DriverManager.getConnection(url, user, password);
         	}
         }
-        catch (SQLException e) {
-            //JOptionPane.showMessageDialog(null, "Could not connect to database! " 
-            //		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        catch (Exception e) {
         	e.printStackTrace();
+        	close();
+        	// cannot do anything without database access
+        	System.exit(-1);
         }
 	}
 	
@@ -47,8 +61,6 @@ public class Database {
 		try {
 			return connection.prepareStatement(sql);
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not prepare SQL statement! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
 		return null;
@@ -67,8 +79,6 @@ public class Database {
 	        // URL
 			return user;
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find user! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -88,15 +98,13 @@ public class Database {
 	        	return user;	        	
 	        }
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find user! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
 	}
 	
 	public void insertCredibilityScore(BigDecimal userId, float score, boolean calculated) {
-		String type = calculated ? "calculated" : "manual";
+		String type = calculated ? "calculated" : "h-index";
 		PreparedStatement preparedStatement = prepareStatement(
 				"INSERT INTO hackathon.credibility (score, type, user_id, created_at) VALUES (?, '" + type + "', ?, ?)");
 		try {
@@ -105,8 +113,6 @@ public class Database {
 			preparedStatement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
 			preparedStatement.executeUpdate();
 		} catch(SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not insert credibility score! " 
-			//	+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
 	}
@@ -125,8 +131,6 @@ public class Database {
 	        }
 	        
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find score! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -145,8 +149,6 @@ public class Database {
 	        score.setUser(getUser(resultSet.getBigDecimal("user_id")));
 			return score;
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find score! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -174,8 +176,6 @@ public class Database {
 	        }
 			return listOfRetweets;
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find retweets! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -197,8 +197,6 @@ public class Database {
 	        retweet.setType(tweet.getType());
 	        // retweet.setTimePosted(
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find retweets! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -225,8 +223,6 @@ public class Database {
 	        }
 			return listOfTweets;
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find tweets! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -249,8 +245,6 @@ public class Database {
 	        }
 	        
 		} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not find tweets! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 		}
     	return null;
@@ -270,24 +264,18 @@ public class Database {
 	        	return null;
 	        }
     	} catch (SQLException e) {
-			//JOptionPane.showMessageDialog(null, "Could not search scores! " 
-			//		+ e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     		e.printStackTrace();
 		}
     	return null;
 	}
 	
-	@Override
-	protected void finalize() throws Throwable {
-		super.finalize();
+	public static void close() {
 		if(connection != null) {
-			/*
         	try {
 				connection.close();
 			} catch (SQLException e) {
 				// ignore
 			}
-			*/
         }
 	}
 }

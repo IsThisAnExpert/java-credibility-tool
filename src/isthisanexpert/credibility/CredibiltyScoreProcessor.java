@@ -56,6 +56,8 @@ public class CredibiltyScoreProcessor {
 	    	
 	    }
 	    
+	    // TODO check Followers + Following
+	    
 	    // TODO check credibility of linked websites?
 	    
 	    // multiply by 0 < discount_factor < 1
@@ -106,7 +108,7 @@ public class CredibiltyScoreProcessor {
 		return listOfUsers;
 	}
 	
-	public void process(String username) {
+	public void processCalculation(String username) {
 		Database db = new Database();
         User user = db.getUserByName(username);
         CredibilityScore score = db.findCredibilityScoreForUser(user);
@@ -117,6 +119,12 @@ public class CredibiltyScoreProcessor {
             // output for twitter bot
     	    System.out.println(score.getScore());
         }
+	}
+	
+	public void processHIndexInsertion(String username, float hIndex) {
+		Database db = new Database();
+        User user = db.getUserByName(username);
+        db.insertCredibilityScore(user.getId(), hIndex, false);
 	}
 
 }
